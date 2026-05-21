@@ -1,0 +1,140 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+.form-wrap{max-width:520px;margin:0 auto;padding:2rem 0}
+h2{font-size:18px;font-weight:500;color:var(--color-text-primary);margin-bottom:1.5rem}
+.field{margin-bottom:1.25rem}
+label{display:block;font-size:13px;color:var(--color-text-secondary);margin-bottom:6px}
+input,select{width:100%;padding:8px 12px;font-size:14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary);outline:none;transition:border-color .2s}
+input:focus,select:focus{border-color:var(--color-border-primary);box-shadow:0 0 0 3px rgba(128,128,128,.08)}
+input.valid{border-color:#3B6D11}
+input.invalid{border-color:#A32D2D}
+.hint{font-size:12px;margin-top:5px;min-height:16px;transition:color .2s}
+.hint.ok{color:#3B6D11}
+.hint.err{color:#A32D2D}
+.hint.neutral{color:var(--color-text-tertiary)}
+button[type=submit]{margin-top:1rem;width:100%;padding:10px;font-size:14px;font-weight:500;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary);cursor:pointer;transition:background .2s,opacity .2s}
+button[type=submit]:not(:disabled):hover{background:var(--color-background-secondary)}
+button[type=submit]:disabled{opacity:.4;cursor:not-allowed}
+</style>
+
+<div class="form-wrap">
+  <h2>Регистрация команды</h2>
+
+  <div class="field">
+    <label for="repo">Ссылка на репозиторий команды</label>
+    <input type="text" id="repo" placeholder="github.com/username/repo-name" autocomplete="off">
+    <span class="hint neutral" id="repo-hint">github.com/stud-team/hackathon-2026</span>
+  </div>
+
+  <div class="field">
+    <label for="role">Роль капитана</label>
+    <select id="role">
+      <option value="developer">Разработчик (Developer)</option>
+      <option value="designer">Дизайнер (Designer)</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label for="secret" id="secret-label">Секретный ключ команды</label>
+    <input type="password" id="secret" placeholder="" autocomplete="new-password">
+    <span class="hint neutral" id="secret-hint">Введите ключ</span>
+  </div>
+
+  <div class="field">
+    <label for="skills">Навыки и стек технологий</label>
+    <input type="text" id="skills" placeholder="React, Node.js, Figma...">
+    <span class="hint neutral" id="skills-hint">Минимум 2 навыка через запятую</span>
+  </div>
+
+  <button type="submit" id="submit-btn" disabled>Отправить заявку</button>
+</div>
+
+<script>
+const repoInput   = document.getElementById('repo');
+const roleSelect  = document.getElementById('role');
+const secretInput = document.getElementById('secret');
+const skillsInput = document.getElementById('skills');
+const submitBtn   = document.getElementById('submit-btn');
+
+const repoHint    = document.getElementById('repo-hint');
+const secretHint  = document.getElementById('secret-hint');
+const skillsHint  = document.getElementById('skills-hint');
+const secretLabel = document.getElementById('secret-label');
+
+const repoRegex = /^(https:\/\/)?github\.com\/[A-Za-z0-9_-]{3,20}\/[A-Za-z0-9_-]{3,30}$/;
+const devRegex  = /^[0-9A-Fa-f]{8}$/;
+const desRegex  = /^#[A-Za-z0-9]{5,}$/;
+const skillsRegex = /^[^,]+(,[^,]+)+$/;
+
+let valid = { repo: false, secret: false, skills: false };
+
+function setHint(el, input, ok, msg, okMsg) {
+  el.textContent = ok ? okMsg : msg;
+  el.className = 'hint ' + (ok ? 'ok' : (input.value ? 'err' : 'neutral'));
+  input.className = input.value ? (ok ? 'valid' : 'invalid') : '';
+}
+
+function updateSecretHint() {
+  const role = roleSelect.value;
+  if (role === 'developer') {
+    secretLabel.textContent = 'Секретный ключ (HEX, 8 символов)';
+    secretInput.placeholder = 'A1b2C3d4';
+  } else {
+    secretLabel.textContent = 'Секретный ключ (#HEX-цвет, мин. 6 символов)';
+    secretInput.placeholder = '#Art2026';
+  }
+}
+
+function validateAll() {
+  submitBtn.disabled = !(valid.repo && valid.secret && valid.skills);
+}
+
+repoInput.addEventListener('input', () => {
+  const v = repoRegex.test(repoInput.value.trim());
+  valid.repo = v;
+  setHint(repoHint, repoInput, v,
+    'Неверный формат. Пример: github.com/username/repo',
+    'Ссылка корректна');
+  validateAll();
+});
+
+roleSelect.addEventListener('change', () => {
+  updateSecretHint();
+  secretInput.value = '';
+  valid.secret = false;
+  setHint(secretHint, secretInput, false, 'Введите ключ', '');
+  secretHint.className = 'hint neutral';
+  secretInput.className = '';
+  validateAll();
+});
+
+secretInput.addEventListener('input', () => {
+  const role = roleSelect.value;
+  const regex = role === 'developer' ? devRegex : desRegex;
+  const v = regex.test(secretInput.value);
+  valid.secret = v;
+  const errMsg = role === 'developer'
+    ? 'Ровно 8 символов, только 0-9 и A-F (HEX)'
+    : 'Начинается с #, минимум 6 символов, только буквы и цифры';
+  const okMsg = role === 'developer'
+    ? 'Верный HEX-ключ разработчика'
+    : 'Верный ключ дизайнера';
+  setHint(secretHint, secretInput, v, errMsg, okMsg);
+  validateAll();
+});
+
+skillsInput.addEventListener('input', () => {
+  const val = skillsInput.value.trim();
+  const parts = val.split(',').map(s => s.trim()).filter(Boolean);
+  const v = parts.length >= 2;
+  valid.skills = v;
+  setHint(skillsHint, skillsInput, v,
+    'Укажите минимум 2 навыка через запятую',
+    `Указано навыков: ${parts.length}`);
+  validateAll();
+});
+
+updateSecretHint();
+</script>
